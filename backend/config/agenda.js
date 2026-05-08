@@ -1,6 +1,6 @@
 // agenda.js
+import { Agenda } from "agenda";
 import dns from 'dns';
-import Agenda from "agenda";
 import { sendFCMNotification } from "../src/services/notificationService.js";
 
 const fallbackDNSServers = ['1.1.1.1', '1.0.0.1', '8.8.8.8'];
