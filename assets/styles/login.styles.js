@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   googleInner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 54,
+    paddingHorizontal: 34,
   },
   googleIcon: {
     width: 22,
@@ -152,10 +152,10 @@ const styles = StyleSheet.create({
   googleText: {
     flex: 1,
     textAlign: "center",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
     color: "#000",
-    marginRight: 22,
+    marginLeft: 1,
   }
 });
 

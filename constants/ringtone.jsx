@@ -2,16 +2,16 @@ export const SYSTEM_RINGTONES = [
   {
     id: "default",
     name: "alarm",
-    uri: require("./../assets/sound/beep.mp3"),
+    uri: require("./../assets/sounds/alarm.mp3"),
   },
   {
-    id: "beep",
+    id: "alarm",
     name: "alarm",
-    uri: require("./../assets/sound/beep.mp3"),
+    uri: require("./../assets/sounds/alarm.mp3"),
   },
   {
     id: "digital",
     name: "alarm",
-    uri: require("./../assets/sound/alarm.mp3"),
+    uri: require("./../assets/sounds/alarm.mp3"),
   },
 ];

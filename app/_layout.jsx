@@ -1,152 +1,173 @@
 import { useAuthStore } from "@/store/authStore.js";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Notifications from "expo-notifications";
-import { Stack, useRootNavigationState, useRouter, useSegments } from "expo-router";
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from "react";
+import { Stack, useRootNavigationState, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef } from "react";
 import { Provider as PaperProvider } from "react-native-paper";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import {
-  initNotifications,
-  scheduleMultipleTaskAlarms,
-} from "../assets/utils/notifications.jsx";
 import SafeScreen from "../components/SafeScreen.jsx";
-import { fetchWithFallback } from "../lib/utils/api.js";
-
+import { setupNotificationChannel } from '../services/notificationListener.jsx';
+import { registerPushToken } from '../services/registerPushToken.jsx';
+export let soundObject = null;   // 👈 important
 export default function RootLayout() {
+
   useKeepAwake();
 
   const router = useRouter();
-  const segments = useSegments();
-  const navigationState = useRootNavigationState();
-  const { user, token, checkAuth, isAuthChecked, setTasks } = useAuthStore();
-  const updateTasks = useAuthStore((state) => state.setTasks);
-  // useEffect(() => {
-  //   registerForPushNotificationsAsync();
-  // }, []);
+  const rootNavigationState = useRootNavigationState();
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
+  const handledRef = useRef(false);
+  const { setPushToken, checkAuth } = useAuthStore();
 
+
+
+  ///Generate push token 
   useEffect(() => {
-    checkAuth();
-    console.log("At checkAuth() done ")
-  }, [])
-
-
-  //alarm notification
-  useEffect(() => {
-    const restoreNotifications = async () => {
-      await Notifications.deleteNotificationChannelAsync('alarm');
-      await initNotifications();
+    const initPushToken = async () => {
       try {
-        console.log("Fetching tasks for notifications with token >> ", token);
 
-        // if there's no token yet, skip fetching; we'll run again when token/isAuthChecked change
-        if (!token) {
-          console.log("No token available yet; skipping notification task fetch.");
+        const storedToken = await AsyncStorage.getItem("pushToken");
+
+        if (storedToken) {
+          console.log("Using saved token:", storedToken);
+          return storedToken;
+        }
+
+        console.log("No Push Token found. Generating new token...");
+
+        const generatedPushToken = await registerPushToken();
+
+        console.log("Generated push notification token >> ", generatedPushToken);
+
+        if (!generatedPushToken) {
+          console.log("Push token not generated");
           return;
         }
 
-        // 🔽 DB / API se tasks lao
-        const path = `/api/tasks/getTasks?page=1&limit=1000`;
-        console.log("Attempting notification fetch for path >>", path);
-        const { res: fetchTaskList, usedUrl } = await fetchWithFallback(path, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        await AsyncStorage.setItem("pushToken", generatedPushToken);
+        setPushToken(generatedPushToken);
+        console.log("Push token saved & set successfully >> ", generatedPushToken);
 
-        console.log('Notification fetch used URL >>', usedUrl);
-        const tasksFromDB = await fetchTaskList.json() || {};
-        // backend returns { tasks: [...] }
-        const taskArray = Array.isArray(tasksFromDB.tasks) ? tasksFromDB.tasks : [];
-        console.log("Tasks fetched for notifications >> ", taskArray);
-        updateTasks(taskArray);
-
-        if (!fetchTaskList.ok) throw new Error("Failed to fetch tasks for notifications");
-
-        // only schedule future reminders
-        const futureTasks = taskArray.filter(
-          (task) => new Date(task.reminderTime) > new Date()
-        );
-         if (futureTasks.length === 0) {
-          console.log("No future tasks with reminders found; no notifications scheduled.");
-          return;
-        } 
-        await scheduleMultipleTaskAlarms(futureTasks);
       } catch (error) {
-        console.error("fetching tasks:", error);
+        console.log("Error generating push token >> ", error);
       }
     };
 
-     // 🔘 Action buttons
-    Notifications.setNotificationCategoryAsync("ALARM_ACTIONS", [
-      {
-        identifier: "STOP",
-        buttonTitle: "STOP",
-        options: { opensAppToForeground: true },
-      },
-    ]);
+    initPushToken();
+  }, []);
 
-    // 🔔 Listen to notification tap / button
-    const sub =
-      Notifications.addNotificationResponseReceivedListener(
-        async (response) => {
-          const taskId =
-            response.notification.request.identifier.replace(
-              "task-",
-              ""
-            );
-
-          // STOP pressed
-          if (response.actionIdentifier === "STOP") {
-            await Notifications.cancelScheduledNotificationAsync(
-              `task-${taskId}`
-            );
-          }
-
-          // Notification tapped → open full screen
-          router.push(`/alarm/${taskId}`);
-        }
-      );
-
-    return () => sub.remove();
-  }, [isAuthChecked, token]);
-
-  //handle navigation based on auth state
   useEffect(() => {
-    console.log("At handle navigation")
-    console.log("navigationState >>", navigationState?.key)
-    console.log("isAuthChecked >>", isAuthChecked)
-
-    // don't try to redirect until we know the auth state
-    if (!navigationState?.key || !isAuthChecked) return;
-
-    const inAuthScreen = segments[0] === "(auth)"
-    const isSignedIn = !!user && !!token;
-
-    if (!isSignedIn && !inAuthScreen) {
-      router.replace("/(auth)")
-    } else if (isSignedIn && inAuthScreen) {
-      router.replace("/(tabs)")
-    }
-  }, [user, token, segments, navigationState, isAuthChecked])
+    checkAuth();
+  }, []);
 
 
+  // Listen for incoming notifications and play sound
+  useEffect(() => {
+    setupNotificationChannel();
+    // const sub = setupNotificationChannel();
 
+    // return () => sub?.remove();
+  }, []);
+
+  // Navigation on notification click
+  useEffect(() => {
+    let isMounted = true;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        console.log("Notification clicked >> ", response);
+
+        const data = response.notification.request.content.data;
+
+        // Alarm screen par navigate karo
+        // delay so navigation ready ho jaye
+        setTimeout(() => {
+          router.push({
+            pathname: "/(tabs)",
+            params: {
+              taskTitle: data.taskTitle,
+              taskDescription: data.taskDescription,
+            },
+          });
+        }, 1000); // ⏳ important
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.remove()
+    };
+  }, []);
+
+
+  // Navigation on notification click when app is killed
+  useEffect(() => {
+    if (!lastNotificationResponse || handledRef.current) return;
+
+    const notificationDate = lastNotificationResponse.notification.date;
+
+    const now = new Date();
+
+    const diff = (now - new Date(notificationDate)) / 1000;
+
+    // ⛔ agar 5 sec se purana hai to ignore karo
+    if (diff > 5) return;
+
+    handledRef.current = true;
+
+    const data = lastNotificationResponse.notification.request.content.data;
+
+    router.push({
+      pathname: "/(tabs)",
+      params: {
+        taskTitle: data.taskTitle,
+        taskDescription: data.taskDescription,
+      },
+    });
+  }, [lastNotificationResponse]);
+
+
+  // const setupChannel = async () => {
+  //   if (Platform.OS === "android") {
+  //     await Notifications.setNotificationChannelAsync("alarm", {
+  //       name: "Alarm Channel",
+  //       importance: Notifications.AndroidImportance.MAX,
+  //       sound: "alarm",   // extension nahi
+  //       vibrationPattern: [0, 500, 500, 500],
+  //       enableVibrate: true,
+  //       lockscreenVisibility:
+  //         Notifications.AndroidNotificationVisibility.PUBLIC,
+  //     });
+  //   }
+  // };
+
+  // const playAlarm = async () => {
+  //   const { sound } = await Audio.Sound.createAsync(
+  //     require("../assets/sounds/alarm.mp3"), // apna sound file
+  //     { shouldPlay: true, isLooping: true, volume: 1.0 }
+  //   );
+
+  //   soundObject = sound;
+
+  //   // 15 second baad stop
+  //   setTimeout(async () => {
+  //     if (soundObject) {
+  //       await soundObject.stopAsync();
+  //       await soundObject.unloadAsync();
+  //       soundObject = null;
+  //     }
+  //   }, 15000);
+  // };
 
   return (
-    <PaperProvider>
-      <SafeAreaProvider>
-        <SafeScreen>
-
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        </SafeScreen>
-        <StatusBar style="dark" />
-      </SafeAreaProvider>
-    </PaperProvider>
+    <SafeScreen>
+      <PaperProvider>
+        <StatusBar style="dark" backgroundColor="#F3F7F3" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </PaperProvider>
+    </SafeScreen>
   );
+
+
 }

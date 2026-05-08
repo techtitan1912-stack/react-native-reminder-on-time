@@ -11,6 +11,9 @@ const COLORS = {
   border: "#c8e6c9",
   white: "#ffffff",
   black: "#000000",
+  activeOutline: "#4CAF50",
+  inactiveOutline: "#6FCF97",   // outlineColor
+  cancelBtn: "#ff8080", // red
 };
 
 // RETRO

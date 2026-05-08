@@ -2,64 +2,214 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   GoogleSignin,
   isErrorWithCode,
-  isSuccessResponse,
   statusCodes
 } from '@react-native-google-signin/google-signin';
-import { Link, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Image, Text, TouchableOpacity, View } from 'react-native';
+import { useRootNavigationState, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { Alert, Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import style from '../../assets/styles/login.styles.js';
+import { fetchWithFallback } from "../../lib/utils/api.js";
+import { registerPushToken } from '../../services/registerPushToken.jsx';
 import { useAuthStore } from '../../store/authStore.js';
 
-GoogleSignin.configure({
-  webClientId: "579924007355-ncr1om23fjr7fjnetd4r7s25f3rdljpq.apps.googleusercontent.com",
-});
+// Initialize Google Sign-In
+const initializeGoogleSignIn = async () => {
+  try {
+    console.log("Initializing Google Sign-In for platform:", Platform.OS);
+
+    GoogleSignin.configure({
+      webClientId: "579924007355-ncr1om23fjr7fjnetd4r7s25f3rdljpq.apps.googleusercontent.com",
+      // androidClientId: "579924007355-tmapjum1pccmd52cotg4nt57v3ddoac0.apps.googleusercontent.com",
+      iosClientId: "579924007355-e1n2mqrb9c5ng7l5r3k8p4q6s9t2u3v4w.apps.googleusercontent.com", // optional; replace with actual if available
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+      scopes: ['profile', 'email'],
+    });
+    console.log("Google Sign-In initialized successfully");
+  } catch (error) {
+    console.error("Error initializing Google Sign-In:", error);
+  }
+};
+
+// Initialize on app load
+initializeGoogleSignIn();
 
 export default function Index() {
-  const{user, token, checkAuth} = useAuthStore();
+  const { user, loginToken, isAuthChecked, setLoginToken, updateFCMToken, checkAuth } = useAuthStore();
 
-  console.log("At index page auth store data >>", user, token);
+  console.log("At (auth)/index page :: After Auth check User >>", user);
+  console.log("At (auth)/index page :: Login Token >>", loginToken);
+  console.log("At (auth)/index page :: isAuthChecked >>", isAuthChecked);
+
+
+  const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-  
-  const [userInfo, setUserInfo] = useState(null);
-  const router = useRouter();
+    // ✅ wait until navigation ready
+    if (!rootNavigationState?.key) return;
+
+    if (isAuthChecked && loginToken) {
+      router.replace('/(tabs)');
+    }
+  }, [rootNavigationState?.key, isAuthChecked, loginToken]);
+
   const handleGoogleSignIn = async () => {
+    console.log("Calling handle Google sign >>");
     try {
       await GoogleSignin.hasPlayServices();
-      const response = await GoogleSignin.signIn();
-      if (isSuccessResponse(response)) {
-        console.log("Google sign is successful >>", response.data);
-        setUserInfo(response.data);
+      console.log("Play services available");
 
-        const email = response.data?.user?.email;
+      const response = await GoogleSignin.signIn();
+      console.log("Full Google response >>", JSON.stringify(response, null, 2));
+
+      if (response.type === 'success') {
+        const user = response.data.user;
+        const email = user.email;
+        const name = user.name;
+
+        console.log("Google sign is successful >>", { email, name });
+
+
+
         if (email) {
           console.log("Email from Google Sign-In >> ", email);
           await AsyncStorage.setItem("email", email);
+
+          // Now authenticate with backend
+          console.log("Calling backend login with email >> ", email);
+          const { res: loginResponse, usedUrl } = await fetchWithFallback('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          });
+          console.log("Used backend URL >> ", usedUrl);
+
+          const loginData = await loginResponse.json();
+          console.log("Backend login response status >> ", loginResponse.status);
+          console.log("Backend login response data >> ", loginData);
+
+          // if (!loginResponse.ok) {
+          //   throw new Error(loginData.message || 'Backend login failed');
+          // }
+
+          // ✅ wait until navigation ready
+
+          if (loginResponse.status === 200) {
+            await AsyncStorage.setItem("user", JSON.stringify(loginData.user));
+            await AsyncStorage.setItem("token", loginData.token);
+
+
+            // ✅ Push token update
+            const storedPushToken = await AsyncStorage.getItem("pushToken");
+
+            if (!storedPushToken) {
+              console.log("No Push Token found. Generating new token...");
+
+              const generatedPushToken = await registerPushToken();
+
+              console.log("Generated push notification token >> ", generatedPushToken);
+
+              if (!generatedPushToken) {
+                console.log("Push token not generated");
+                return;
+              }
+
+              await AsyncStorage.setItem("pushToken", generatedPushToken);
+              setPushToken(generatedPushToken);
+              console.log("Push token saved & set successfully >> ", generatedPushToken);
+              updateFCMToken({ fcmToken: generatedPushToken });
+            } else {
+              console.log("Stored Push Token after generation >> ", storedPushToken);
+              console.log("Update FCM token in backend >> ");
+              updateFCMToken({ fcmToken: storedPushToken });
+            }
+            
+            // ✅ Zustand update
+            setLoginToken(loginData.token);
+            // useAuthStore.setState({ user: loginData.user });
+            checkAuth();
+
+            // ✅ Navigation
+            // if (!rootNavigationState?.key) return;
+            router.replace('/(tabs)');
+          } else {
+            console.log("Navigate to profile ");
+            // ✅ Navigation
+            router.replace('/profile');
+          }
+
+
+
+
+          // wait navigation ready
+          // if (!rootNavigationState?.key) return;
+          //LOGIN TOKEN
+
+          // const getToken = async () => {
+          //   try {
+          //     const storedToken = await AsyncStorage.getItem("token");
+          //     if (storedToken !== null) {
+          //       console.log("Login Token from AsyncStorage >> ", storedToken);
+
+          //       //UPDATE FCM TOKEN IN BACKEND                
+          //       const storedPushToken = await AsyncStorage.getItem("pushToken");
+          //       console.log("Stored Push Token after generation >> ", storedPushToken);
+          //       console.log("Update FCM token in backend >> ");
+          //       updateFCMToken({ fcmToken: storedPushToken });
+
+          //       if (mounted) setLoginToken(storedToken);
+          //     } else {
+          //       console.log("No token found in AsyncStorage");
+          //     }
+          //   } catch (error) {
+          //     console.log("Error retrieving token from AsyncStorage >> ", error);
+          //   }
+          // };
+          // getToken();
+
+
+
+          // if (loginToken) {
+          //   console.log("Navigating to Home page");
+          //   router.replace('/(tabs)');
+          // } else {
+          //   console.log("Navigating to profile page");
+          //   router.replace('/profile');
+          // }
+
         } else {
           console.log("Email not found in Google Sign-In response");
+          Alert.alert('Error', 'Email not found in Google Sign-In response');
         }
-        router.replace('/profile');
       } else {
         Alert.alert('Sign in cancelled by user');
       }
     } catch (error) {
+      console.log("Google Sign-In Error >>", error);
+      console.log("Error Code:", error.code);
+      console.log("Error Message:", error.message);
+      console.log("Full Error Details:", JSON.stringify(error, null, 2));
+
       if (isErrorWithCode(error)) {
         switch (error.code) {
           case statusCodes.IN_PROGRESS:
-            Alert.alert('Operation (e.g. sign in) is in progress already');
+            Alert.alert('Sign In In Progress', 'Operation is in progress already');
             break;
           case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            Alert.alert('Play services not available or outdated');
+            Alert.alert('Play Services', 'Play services not available or outdated');
+            break;
+          case statusCodes.SIGN_IN_CANCELLED:
+            Alert.alert('Cancelled', 'Sign in was cancelled by user');
             break;
           default:
-          // some other error happened
+            Alert.alert('Something went wrong please try again after some time');
+            console.log('Sign In Error', `Error: ${error.code}\n\nMessage: ${error.message}\n\nPlease ensure:\n1. SHA-1 fingerprint from your debug keystore is registered in Google Cloud Console\n2. Android OAuth 2.0 credential is created for package "com.lknandroiddapp.TaskOnTime"\n3. You're using the correct OAuth client ID`);
         }
       } else {
-        Alert.alert('An error occurred during sign in');
-        console.log("Google Sign-In Error >>", error);
+        console.log('Sign In Failed', error.message || 'An error occurred during sign in');
       }
     }
   };
@@ -67,7 +217,10 @@ export default function Index() {
   const handleSignOut = async () => {
     try {
       await GoogleSignin.signOut();
-      setUserInfo(null);
+      await AsyncStorage.removeItem("token")
+      await AsyncStorage.removeItem("user")
+      await AsyncStorage.removeItem("email")
+      // await AsyncStorage.removeItem("pushToken")
       Alert.alert('Successfully signed out');
     } catch (error) {
       console.log("Logout Error >>", error);
@@ -103,13 +256,7 @@ export default function Index() {
         </View>
       </View>
 
-      <View>
-        <TouchableOpacity style={style.googleButton} onPress={handleSignOut}>
-          <Text style={style.googleText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
-      <Link href="/(tabs)">Go to Home Page</Link>
-      <Link href="/(auth)/profile">Go to Profile</Link>
+
 
     </View>
   )

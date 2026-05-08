@@ -1,9 +1,11 @@
 import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 
 // Notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowList: true,
+    shouldShowBanner: true,   // notification popup
+    shouldShowList: true,     // notification tray
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -19,16 +21,28 @@ export async function initNotifications() {
     return false;
   }
 
+  // 🔘 Action buttons
+  Notifications.setNotificationCategoryAsync("ALARM_ACTIONS", [
+    {
+      identifier: "STOP",
+      buttonTitle: "STOP",
+      options: { opensAppToForeground: true },
+    },
+  ]);
+
   // 🔔 ALARM CHANNEL
-  await Notifications.setNotificationChannelAsync("alarm", {
-    name: "Task Alarm",
-    importance: Notifications.AndroidImportance.MAX,
-    sound: "alarm", // 🔑 alarm.mp3 (NO extension)
-    vibrationPattern: [0, 1000, 500, 1000],
-    enableVibrate: true,
-    bypassDnd: true, // 🔥 VERY IMPORTANT
-    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-  });
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("alarm", {
+      name: "Alarm Channel",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "alarm.mp3",
+      vibrationPattern: [0, 500, 500, 500],
+      enableVibrate: true,
+      bypassDnd: true,
+      lockscreenVisibility:
+        Notifications.AndroidNotificationVisibility.PUBLIC,
+    });
+  }
 
   return true;
 }
@@ -36,28 +50,56 @@ export async function initNotifications() {
 // ✅ TEST LOCAL NOTIFICATION (ANDROID SAFE)
 export async function scheduleTaskWithAlarm(task) {
   console.log("Scheduling notification for task >> ", task);
-  const triggerDate = new Date(task.reminderTime);
-  console.log("Now IST:", new Date().toString());
-  console.log("Trigger IST:", triggerDate.toString());
 
-  if (triggerDate <= new Date()) return;
+  // log raw reminder time string so we can diagnose parsing issues
+  console.log("raw reminderTime :", task.reminderTime);
+
+  // parse the incoming ISO string directly
+  const reminderDate = new Date(task.reminderTime);
+  const triggerDate = new Date(reminderDate.getTime() - 60000);
+  const istTime = triggerDate.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  console.log("Notification sheduled at IST Time:", istTime);
+
+  if (triggerDate.getTime() - Date.now() < 5000) {
+    console.log("Too close to current time");
+    return;
+  } else if (triggerDate <= new Date()) return;
 
   await Notifications.scheduleNotificationAsync({
     identifier: `task-${task._id}`,
     content: {
       title: "⏰ " + task.title,
-      body: "Tap to stop alarm" + (task.description ? `\n${task.description}` : ""),
-      categoryIdentifier: "ALARM_ACTIONS", // 🔑 important
+      body:
+        (task.description ? `${task.description}\n` : "") +
+        "Tap to stop alarm",
+      sound: "alarm",
+      categoryIdentifier: "ALARM_ACTIONS",
       priority: Notifications.AndroidNotificationPriority.MAX,
-      sticky: true, // ❗ notification stays
+      sticky: true,
+      // 👇 this is for showing on Alarm Screen
+      data: {
+        taskId: task._id,
+        taskTitle: task.title,
+        taskDescription: task.description,
+      },
     },
     trigger: {
-      type: "date",
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerDate,
-      channelId: "alarm",
+      channelId: "alarm", // Android requires this
     },
   });
-  console.log("Notification scheduled for >> ", triggerDate);
+  console.log("Notification scheduled for >> ", istTime);
 }
 
 export async function scheduleMultipleTaskAlarms(tasks) {
@@ -69,20 +111,4 @@ export async function scheduleMultipleTaskAlarms(tasks) {
 export async function cancelAllNotifications() {
   await Notifications.cancelAllScheduledNotificationsAsync();
   console.log("All notifications cancelled ❌");
-}
-
-/**
- * 🧪 TEST ALARM (5 seconds later)
- */
-export async function testAlarmNotification() {
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "TEST ALARM",
-      body: "Sound test",
-    },
-    trigger: {
-      seconds: 5,
-      channelId: "alarm",
-    },
-  });
 }
