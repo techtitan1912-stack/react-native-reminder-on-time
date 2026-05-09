@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "579924007355",
+    "project_id": "taskontime-485818",
+    "storage_bucket": "taskontime-485818.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:579924007355:android:890bd1bfa97d2ab2110c9e",
+        "android_client_info": {
+          "package_name": "com.lknandroiddapp.TaskOnTime"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "579924007355-tmapjum1pccmd52cotg4nt57v3ddoac0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.lknandroiddapp.TaskOnTime",
+            "certificate_hash": "ab7d90387a9faaf1d6fe82589298ec86c7286ceb"
+          }
+        },
+        {
+          "client_id": "579924007355-ncr1om23fjr7fjnetd4r7s25f3rdljpq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAe24eL38SY8fZXYgd7OtoQVrGfedW7-fo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "579924007355-ncr1om23fjr7fjnetd4r7s25f3rdljpq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
