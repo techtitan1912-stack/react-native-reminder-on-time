@@ -24,7 +24,10 @@ export default function RootLayout() {
 
   ///Generate push token 
   useEffect(() => {
+
+
     const initPushToken = async () => {
+
       try {
 
         const storedToken = await AsyncStorage.getItem("pushToken");

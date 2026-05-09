@@ -62,8 +62,11 @@ router.post("/register", async (req, res) => {
       pushToken: pushToken
     });
     await user.save();
+    console.log("User registered successfully with ID:", user._id);
 
     const token = generateToken(user._id);
+    console.log("Registration successful, generated token:", token);
+    
     return res.status(201).json({
       token,
       user: {
@@ -114,7 +117,7 @@ router.post("/login", async (req, res) => {
     console.timeEnd("TOKEN");
 
     console.timeEnd("LOGIN_TOTAL");
-    
+
     return res.status(200).json({
       token,
       user: {

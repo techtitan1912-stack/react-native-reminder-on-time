@@ -154,12 +154,16 @@ export const useAuthStore = create((set) => ({
   logout: async () => {
     try {
       // AsyncStorage clear
-      await AsyncStorage.multiRemove([
-        "token",
-        "user",
-        "email",
-        "pushToken"
-      ]);
+
+      await AsyncStorage.clear();
+      console.log("AsyncStorage Cleared");
+      
+      // await AsyncStorage.multiRemove([
+      //   "token",
+      //   "user",
+      //   "email",
+      //   "pushToken"
+      // ]);
 
       // Zustand store reset
       set({

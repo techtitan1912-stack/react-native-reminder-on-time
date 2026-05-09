@@ -214,19 +214,7 @@ export default function Index() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await GoogleSignin.signOut();
-      await AsyncStorage.removeItem("token")
-      await AsyncStorage.removeItem("user")
-      await AsyncStorage.removeItem("email")
-      // await AsyncStorage.removeItem("pushToken")
-      Alert.alert('Successfully signed out');
-    } catch (error) {
-      console.log("Logout Error >>", error);
-      Alert.alert('An error occurred during sign out');
-    }
-  }
+  
   return (
     <View style={style.container}>
       <View style={style.topIllustration}>
