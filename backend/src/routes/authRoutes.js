@@ -86,6 +86,8 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
 
   try {
+     console.time("LOGIN_TOTAL");
+
     const { email } = req.body;
     console.log("At user login api req body >>> ", req.body);
 
@@ -93,14 +95,26 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
+     console.time("DB_QUERY");
+
     // compare email with db
     const user = await User.findOne({ email });
+
+    console.timeEnd("DB_QUERY");
+
     if (!user) {
       return res.status(400).json({ message: "User with given email does not exist in DB" });
     }
 
+    console.time("TOKEN");
+
     // generate token
     const token = generateToken(user._id);
+
+    console.timeEnd("TOKEN");
+
+    console.timeEnd("LOGIN_TOTAL");
+    
     return res.status(200).json({
       token,
       user: {
