@@ -20,7 +20,14 @@ export default function RootLayout() {
   const handledRef = useRef(false);
   const { setPushToken, checkAuth } = useAuthStore();
 
+useEffect(() => {
+  const clearStorage = async () => {
+    await AsyncStorage.clear();
+    console.log("Storage Cleared");
+  };
 
+  clearStorage();
+}, []);
 
   ///Generate push token 
   useEffect(() => {

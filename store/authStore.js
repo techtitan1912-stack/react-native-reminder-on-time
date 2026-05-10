@@ -258,10 +258,6 @@ export const useAuthStore = create((set) => ({
 
       console.log("Updating FCM token with data >> ", { fcmToken });
 
-      const formData = new FormData();
-
-      formData.append("pushToken", fcmToken);
-
       const response = await fetch(
         `${BASE_URL}/api/auth/updateFCMToken`,
         {
@@ -269,7 +265,9 @@ export const useAuthStore = create((set) => ({
           headers: {
             Authorization: `Bearer ${loginToken}`,
           },
-          body: formData,
+          body: JSON.stringify({
+          pushToken: fcmToken,
+        }),
         }
       );
 
