@@ -66,7 +66,7 @@ export default function ContactSelectComponent({
 
       const numbers = contactData.map(c => formatNumber(c.phone));
 
-      const path = `/api/auth/checkRegistered`;
+      const path = `/api/auth/checkRegisteredNumbers`;
       console.log("At full sync >>> path : ", BASE_URL, path);
 
       const res = await fetch(`${BASE_URL}${path}`, {

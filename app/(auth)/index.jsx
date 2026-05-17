@@ -8,7 +8,6 @@ import { useRootNavigationState, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import style from '../../assets/styles/login.styles.js';
-import { fetchWithFallback } from "../../lib/utils/api.js";
 import { registerPushToken } from '../../services/registerPushToken.jsx';
 import { useAuthStore } from '../../store/authStore.js';
 
@@ -35,7 +34,7 @@ const initializeGoogleSignIn = async () => {
 initializeGoogleSignIn();
 
 export default function Index() {
-  const { user, loginToken, isAuthChecked, setLoginToken, updateFCMToken, checkAuth } = useAuthStore();
+  const { user, loginToken, isAuthChecked, setLoginToken, updateFCMToken, checkAuth,login,setPushToken } = useAuthStore();
 
   console.log("At (auth)/index page :: After Auth check User >>", user);
   console.log("At (auth)/index page :: Login Token >>", loginToken);
@@ -76,28 +75,22 @@ export default function Index() {
           console.log("Email from Google Sign-In >> ", email);
           await AsyncStorage.setItem("email", email);
 
-          // Now authenticate with backend
-          console.log("Calling backend login with email >> ", email);
-          const { res: loginResponse, usedUrl } = await fetchWithFallback('/api/auth/login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email }),
-          });
-          console.log("Used backend URL >> ", usedUrl);
+          const responseData = await login(email);
+          // const { res: loginResponse, usedUrl } = await fetchWithFallback('/api/auth/login', {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //   },
+          //   body: JSON.stringify({ email }),
+          // });
+          // console.log("Used backend URL >> ", usedUrl);
 
-          const loginData = await loginResponse.json();
-          console.log("Backend login response status >> ", loginResponse.status);
+          const loginData = await responseData.data;
+          console.log("Backend login response status >> ", responseData.status);
           console.log("Backend login response data >> ", loginData);
 
-          // if (!loginResponse.ok) {
-          //   throw new Error(loginData.message || 'Backend login failed');
-          // }
 
-          // ✅ wait until navigation ready
-
-          if (loginResponse.status === 200) {
+          if (responseData.status === 200) {
             await AsyncStorage.setItem("user", JSON.stringify(loginData.user));
             await AsyncStorage.setItem("token", loginData.token);
 
@@ -122,7 +115,7 @@ export default function Index() {
               console.log("Push token saved & set successfully >> ", generatedPushToken);
               updateFCMToken({ fcmToken: generatedPushToken });
             } else {
-              console.log("Stored Push Token after generation >> ", storedPushToken);
+              console.log("Stored Push Token >> ", storedPushToken);
               console.log("Update FCM token in backend >> ");
               updateFCMToken({ fcmToken: storedPushToken });
             }

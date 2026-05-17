@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useAuthStore } from "../store/authStore.js";
 // import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -21,6 +21,7 @@ export default function EditProfile({ navigation }) {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [userName, setUserName] = useState(user?.username);
     const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth);
     const router = useRouter();
 
@@ -76,7 +77,7 @@ export default function EditProfile({ navigation }) {
     };
 
     const handleSaveProfile = async () => {
-        router.back();
+        setIsLoading(true);
         const result = await updateProfile({
             userName,
             dateOfBirth,
@@ -85,10 +86,13 @@ export default function EditProfile({ navigation }) {
 
         if (result.success) {
             console.log("Profile updated successfully, going back to settings")
-
+            router.push("/(tabs)/setting");
+            setIsLoading(false);
 
         } else {
-            alert(result.message);
+            console.log("Error updating profile >> ", result.message);
+            router.back();
+            setIsLoading(false);
         }
     }
 
@@ -196,7 +200,7 @@ export default function EditProfile({ navigation }) {
                     <Image source={{ uri: profileImage }} style={styles.fullImage} />
                 </TouchableOpacity>
             </Modal>
-
+            {isLoading && <ActivityIndicator color="#fff" />}
         </ScrollView>
     );
 }

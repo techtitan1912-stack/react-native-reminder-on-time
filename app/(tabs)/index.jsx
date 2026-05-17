@@ -105,7 +105,10 @@ export default function Home() {
                 }
             });
             const responseData = await response.json();
-            console.log("At get task list Response Data >> ", responseData);
+            console.log("At get task list Response Data >> ", responseData); console.log(
+                "At get task list username >> ",
+                responseData.tasks[0]?.user
+            );
             if (!response.ok) throw new Error(responseData.message || "Something went wrong");
 
             const mergedTasks = refresh || pageNumber === 1
@@ -254,7 +257,6 @@ export default function Home() {
 
             const path = `/api/tasks/updateTaskIsViewed/${taskId}`;
             console.log("Attempting updateTaskIsViewed for path >>", path);
-            console.log(" At update task >>> Current Time : ", new Date());
 
             const response = await fetch(`${BASE_URL}${path}`, {
                 method: "PUT",
@@ -264,17 +266,11 @@ export default function Home() {
                 }
             });
 
-            const responseData = await response.json();
+            const responseData = await response.text();
             console.log("At updateTaskIsViewed Response Data >> ", responseData);
 
-            if (!response.ok) throw new Error(responseData.message || "Something went wrong");
+            if (response.status !== 200) throw new Error("Something went wrong");
 
-            // OR local state update
-            // setTask(prev =>
-            //     prev.map(t =>
-            //         t._id === taskId ? { ...t, isViewed: true } : t
-            //     )
-            // );
         } catch (e) {
             console.log("Error updating viewed:", e);
         }
@@ -284,10 +280,10 @@ export default function Home() {
         // bedge const
         const hasMention = item.mentionNumber && item.mentionNumber.length > 0;
         const isPending = !item.isCompleted;
-        const userId = item?.user;
+        const userId = item?.user?._id;
         const isNew = !item.isViewed;
-        const isSelf = item.mobileNumber === user?.mobileNumber;
-        
+        const isSelf = item?.user?.mobileNumber === user?.mobileNumber;
+
         return (
             <Pressable
                 onPress={() => {
@@ -318,13 +314,12 @@ export default function Home() {
                     {/* 2️⃣ MIDDLE - Title + Date */}
                     <View style={styles.middle}>
 
-                        
+
 
                         <Text style={styles.userNameOnTaskCard}>
                             {
-                                hasMention
-                                    ? (isSelf ? "@Mention" : item.username)
-                                    : (isSelf ? "Self" : item.username)
+                                hasMention ? (isSelf ? "@Mention" : item.user?.username)
+                                    : (isSelf ? "Self" : item.user?.username)
                             }
                         </Text>
 
@@ -385,7 +380,8 @@ export default function Home() {
                                     title="Complete"
                                 />
                             )}
-                            {userId === user?.id && (
+                            {/* userId === user?._id */}
+                            {isSelf && (
                                 <Menu.Item
                                     onPress={() => {
                                         setActiveMenuId(null);

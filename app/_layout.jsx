@@ -1,5 +1,4 @@
 import { useAuthStore } from "@/store/authStore.js";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Notifications from "expo-notifications";
 import { Stack, useRootNavigationState, useRouter } from "expo-router";
@@ -8,7 +7,6 @@ import { useEffect, useRef } from "react";
 import { Provider as PaperProvider } from "react-native-paper";
 import SafeScreen from "../components/SafeScreen.jsx";
 import { setupNotificationChannel } from '../services/notificationListener.jsx';
-import { registerPushToken } from '../services/registerPushToken.jsx';
 export let soundObject = null;   // 👈 important
 export default function RootLayout() {
 
@@ -20,52 +18,52 @@ export default function RootLayout() {
   const handledRef = useRef(false);
   const { setPushToken, checkAuth } = useAuthStore();
 
-useEffect(() => {
-  const clearStorage = async () => {
-    await AsyncStorage.clear();
-    console.log("Storage Cleared");
-  };
+// useEffect(() => {
+//   const clearStorage = async () => {
+//     await AsyncStorage.clear();
+//     console.log("Storage Cleared");
+//   };
 
-  clearStorage();
-}, []);
+//   clearStorage();
+// }, []);
 
   ///Generate push token 
-  useEffect(() => {
+  // useEffect(() => {
 
 
-    const initPushToken = async () => {
+  //   const initPushToken = async () => {
 
-      try {
+  //     try {
 
-        const storedToken = await AsyncStorage.getItem("pushToken");
+  //       const storedToken = await AsyncStorage.getItem("pushToken");
 
-        if (storedToken) {
-          console.log("Using saved token:", storedToken);
-          return storedToken;
-        }
+  //       if (storedToken) {
+  //         console.log("Using saved token:", storedToken);
+  //         return storedToken;
+  //       }
 
-        console.log("No Push Token found. Generating new token...");
+  //       console.log("No Push Token found. Generating new token...");
 
-        const generatedPushToken = await registerPushToken();
+  //       const generatedPushToken = await registerPushToken();
 
-        console.log("Generated push notification token >> ", generatedPushToken);
+  //       console.log("Generated push notification token >> ", generatedPushToken);
 
-        if (!generatedPushToken) {
-          console.log("Push token not generated");
-          return;
-        }
+  //       if (!generatedPushToken) {
+  //         console.log("Push token not generated");
+  //         return;
+  //       }
 
-        await AsyncStorage.setItem("pushToken", generatedPushToken);
-        setPushToken(generatedPushToken);
-        console.log("Push token saved & set successfully >> ", generatedPushToken);
+  //       await AsyncStorage.setItem("pushToken", generatedPushToken);
+  //       setPushToken(generatedPushToken);
+  //       console.log("Push token saved & set successfully >> ", generatedPushToken);
 
-      } catch (error) {
-        console.log("Error generating push token >> ", error);
-      }
-    };
+  //     } catch (error) {
+  //       console.log("Error generating push token >> ", error);
+  //     }
+  //   };
 
-    initPushToken();
-  }, []);
+  //   initPushToken();
+  // }, []);
 
   useEffect(() => {
     checkAuth();

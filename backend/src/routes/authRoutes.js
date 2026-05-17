@@ -66,7 +66,7 @@ router.post("/register", async (req, res) => {
 
     const token = generateToken(user._id);
     console.log("Registration successful, generated token:", token);
-    
+
     return res.status(201).json({
       token,
       user: {
@@ -89,7 +89,7 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
 
   try {
-     console.time("LOGIN_TOTAL");
+    console.time("LOGIN_TOTAL");
 
     const { email } = req.body;
     console.log("At user login api req body >>> ", req.body);
@@ -98,7 +98,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-     console.time("DB_QUERY");
+    console.time("DB_QUERY");
 
     // compare email with db
     const user = await User.findOne({ email });
@@ -157,17 +157,18 @@ router.get("/getUserDetails", protectRoute, async (req, res) => {
 })
 router.put("/updateFCMToken", protectRoute, async (req, res) => {
   try {
-    console.log("At updateFCMToken api req body >>> ", req.body);
     const pushToken = req.body.pushToken;
+    console.log("At updateFCMToken PushToken >>> ", pushToken);
 
     if (!pushToken) {
+      console.log("No push token provided in request body >>> ", req.body);
       return res.status(400).json({ message: "Push token is required" });
     }
 
     const userId = req.user._id;
 
     const updatedUser = await User.findByIdAndUpdate(userId,
-      { pushToken: pushToken },
+      { pushTokens: pushToken },
       { new: true }
     )
 
@@ -175,6 +176,7 @@ router.put("/updateFCMToken", protectRoute, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    console.log("User FCM token updated successfully");
     return res.status(200).json({ message: "FCM token updated successfully" });
 
   } catch (error) {
@@ -206,8 +208,8 @@ router.put("/updateProfile", protectRoute, upload.single("profileImage"), async 
         existingUser.profileImage.includes("cloudinary")) {
 
         try {
-          const olfImageUrl = existingUser.profileImage;
-          const urlParts = olfImageUrl.split("/");
+          const oldImageUrl = existingUser.profileImage;
+          const urlParts = oldImageUrl.split("/");
           const imageName = urlParts[urlParts.length - 1].split(".")[0];
           const folderName = urlParts[urlParts.length - 2];
           const publicId = `${folderName}/${imageName}`;
@@ -228,20 +230,66 @@ router.put("/updateProfile", protectRoute, upload.single("profileImage"), async 
         profileImageUrl = uploadResult.secure_url;
         console.log("New profile image uploaded to Cloudinary successfully:", profileImageUrl);
       }
-      const updatedUser = await User.findByIdAndUpdate(req.user._id,
-        {
-          username: userName,
-          dateOfBirth,
-          profileImage: profileImageUrl
-        },
-        { new: true }
-      )
 
     }
+    const updatedUser = await User.findByIdAndUpdate(req.user._id,
+      {
+        username: userName,
+        dateOfBirth,
+        profileImage: profileImageUrl
+      },
+      { new: true }
+    )
+
+
+    return res.status(200).json({ updatedUser });
   } catch (error) {
     console.log("Error in updateProfile route:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
+});
+
+router.post("/checkRegisteredNumbers", async (req, res) => {
+  const { phoneNumbers } = req.body;
+  console.log("At checkRegisteredNumbers api req body >>> ", req.body);
+
+  try {
+    if (!Array.isArray(phoneNumbers)) {
+      console.log("Invalid phoneNumbers in request body >>> ", phoneNumbers);
+      return res.status(400).json({ message: "phoneNumbers array is required" });
+    }
+
+    const normalizedNumbers = phoneNumbers
+      .map((num) => String(num || "").replace(/\D/g, ""))
+      .filter((num) => num.length === 10);
+
+    if (!normalizedNumbers.length) {
+      return res.status(200).json([]);
+    }
+
+    let registeredNumbers;
+    try {
+      registeredNumbers = await User.find(
+        { mobileNumber: { $in: normalizedNumbers } },
+        "mobileNumber -_id"
+      ).lean();
+    } catch (queryError) {
+      console.error("$in query failed, falling back to $or", queryError);
+      registeredNumbers = await User.find(
+        { $or: normalizedNumbers.map((number) => ({ mobileNumber: number })) },
+        "mobileNumber -_id"
+      ).lean();
+    }
+
+    const registeredList = registeredNumbers.map((item) => item.mobileNumber);
+    console.log("Registered numbers found in DB >>> ", registeredList);
+
+    return res.status(200).json(registeredList);
+  } catch (error) {
+    console.error("Error in checkRegisteredNumbers route:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+
 });
 
 export default router;

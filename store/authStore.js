@@ -24,6 +24,42 @@ export const useAuthStore = create((set) => ({
   setDateOfBirthAuth: (dateOfBirth) => set({ dateOfBirthAuth: dateOfBirth }),
   setLoginToken: (token) => set({ loginToken: token }),
 
+  login: async (email) => {
+
+    set({ isLoading: true });
+
+    try {
+      console.log("Login user with email >> ", { email });
+      console.log("Login Using backend URL >> ", BASE_URL);
+
+      const response = await fetch(`${BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email
+        }),
+
+      });
+      const data = await response.json();
+
+      console.log("Login API response status >> ", response.status);
+      console.log("Login API response data >> ", data);
+
+      return {
+        status: response.status,
+        data
+      };
+    } catch (error) {
+      console.log("Error in login >> ", error);
+      set({ isLoading: false })
+      return { success: false, message: error.message || "Login failed" };
+    }
+
+
+  },
+
   register: async (userName, dateOfBirth, mobileNumber, email, pushToken) => {
 
     // set({ isLoading: true });
@@ -157,7 +193,7 @@ export const useAuthStore = create((set) => ({
 
       await AsyncStorage.clear();
       console.log("AsyncStorage Cleared");
-      
+
       // await AsyncStorage.multiRemove([
       //   "token",
       //   "user",
@@ -219,16 +255,16 @@ export const useAuthStore = create((set) => ({
         }
       );
 
-      const data = await response.json();
+      const responseData = await response.json();
 
-      console.log("Update profile response >> ", data);
+      console.log("Update profile response >> ", responseData);
 
       if (!response.ok) {
-        throw new Error(data.message || "Profile update failed");
+        throw new Error(responseData.message || "Profile update failed");
       }
 
       // ✅ Create updated user object
-      const updatedUser = data.user;
+      const updatedUser = responseData.updatedUser;
 
       // ✅ Update AsyncStorage
       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
@@ -258,16 +294,16 @@ export const useAuthStore = create((set) => ({
 
       console.log("Updating FCM token with data >> ", { fcmToken });
 
-      const response = await fetch(
-        `${BASE_URL}/api/auth/updateFCMToken`,
+      const response = await fetch(`${BASE_URL}/api/auth/updateFCMToken`,
         {
           method: "PUT",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${loginToken}`,
           },
           body: JSON.stringify({
-          pushToken: fcmToken,
-        }),
+            pushToken: fcmToken,
+          }),
         }
       );
 

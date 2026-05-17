@@ -45,10 +45,10 @@ export default function TaskDetail() {
       console.log("Mention users:", parsedTask.mentionedUserNames);
       console.log("Mention users length:", parsedTask.mentionedUserNames.length);
       console.log("Created time:", parsedTask.createdAt);
-      console.log("Mention User id:", parsedTask.user);
+      console.log("Mention User id:", parsedTask.user?._id);
       console.log("Self User id:", user?.id);
 
-      if (parsedTask.user === user?.id) {
+      if (parsedTask.user?._id === user?.id) {
         setIsEditable(true);
       }
 
@@ -118,7 +118,6 @@ export default function TaskDetail() {
           title,
           description,
           reminderTime: scheduled,
-          isCompleted,
         })
       });
 

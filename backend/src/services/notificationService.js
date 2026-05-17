@@ -22,11 +22,11 @@ export const sendFCMNotification = async (
 
   const message = {
     tokens: pushTokensArray,
-    // notification: {
-    //   title,
-    //   body,
-    //   Image: profileImage,
-    // },
+    notification: {
+      title: title || "",
+      body: body || "",
+      imageUrl: profileImage || "",
+    },
 
     data: {
       title: title || "",

@@ -1,11 +1,11 @@
-import expores from "express";
+import express from "express";
 import { agenda } from "../../config/agenda.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
 import { sendFCMNotification } from "../services/notificationService.js";
 
-const router = expores.Router();
+const router = express.Router();
 
 //get task list of user
 router.get("/getTasks", protectRoute, async (req, res) => {
@@ -57,34 +57,50 @@ router.get("/getTasks", protectRoute, async (req, res) => {
 router.post("/addTask", protectRoute, async (req, res) => {
     try {
         const { title, description, reminderTime, mentionedNumber, mentionedUserNames, isCompleted, pushToken, profileImage } = req.body;
+        console.log(" At addTask route >>> pushToken : ", pushToken);
+        console.log(" At addTask route >>> mentionedNumber : ", mentionedNumber);
+        console.log("Type >>>", typeof mentionedNumber[0]);
 
         let pushTokensArray = [];
-        let mentionedNumberArray  = [];
-        if (mentionedNumber && mentionedNumber.trim() !== "") {
+        let mentionedNumberArray = [];
+
+        if (mentionedNumber &&
+            (Array.isArray(mentionedNumber) && mentionedNumber.length > 0)
+        ) {
             // 🔹 1. Clean mentioned numbers
-            mentionedNumberArray  = Array.isArray(mentionedNumber)
+            mentionedNumberArray = Array.isArray(mentionedNumber)
                 ? mentionedNumber.map((num) =>
-                    num.trim().replace(/\s+/g, "").replace(/^\+?91/, "")
+                    num.trim().replace(/\s+/g, "")
                 )
                 : [];
 
-            // 🔹 2. Get push tokens from User table
+            console.log("Cleaned mentioned numbers >>> ", mentionedNumberArray);
 
+            // 🔹 2. Get push tokens from User table
             if (mentionedNumberArray.length > 0) {
-                const users = await User.find({
-                    mobileNumber: { $in: mentionedNumberArray },
-                }).select("pushToken");
+                const users = await User.collection.find({
+                    mobileNumber: {
+                        $in: mentionedNumberArray,
+                    },
+                }).toArray();
+
+                console.log("Found mentioned users >>> ", users);
 
                 pushTokensArray = users
-                    .map((u) => u.pushToken)
+                    .map((u) => u.pushTokens)
+                    .flat()
                     .filter((token) => token); // remove null/undefined
+
+                console.log("Found pushTokensArray >>> ", pushTokensArray);
             }
+        } else {
+            pushTokensArray.push(pushToken);
         }
 
         // 🔹 3. If no tokens found → add self token
-        if (pushTokensArray.length === 0 && pushToken) {
-            pushTokensArray.push(pushToken);
-        }
+        // if (pushTokensArray.length === 0 && pushToken) {
+        //     pushTokensArray.push(pushToken);
+        // }
 
         // 🔹 4. Create Task
         const newTask = new Task({
@@ -92,7 +108,7 @@ router.post("/addTask", protectRoute, async (req, res) => {
             title,
             description,
             reminderTime,
-            mentionedNumber: mentionedNumberArray,
+            mentionNumber: mentionedNumberArray,
             mentionedUserNames,
             isCompleted,
             pushToken: pushTokensArray,
@@ -178,4 +194,53 @@ router.delete("/deleteTask/:id", protectRoute, async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 });
+
+router.put("/updateTask/:taskId", protectRoute, async (req, res) => {
+    try {
+        const taskId = req.params.taskId;
+        const { title, description, reminderTime } = req.body;
+
+        const updatedTask = await Task.findByIdAndUpdate(
+            taskId,
+            { $set: { title, description, reminderTime } },
+            { new: true }
+        );
+        console.log("Task updated:", updatedTask);
+
+        await agenda.cancel({
+            "data.taskId": taskId,
+        });
+
+        // 🔹 2. Schedule reminder
+        await agenda.schedule(new Date(reminderTime), "task reminder", {
+            taskId: savedTask._id,
+            title,
+            pushTokensArray,
+            profileImage,
+        });
+
+        return res.status(200).json({ message: "Task updated successfully", task: updatedTask });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+})
+
+router.put("/updateTaskIsViewed/:id", protectRoute, async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        const updatedTask = await Task.findByIdAndUpdate(
+            id,
+            { $set: { isViewed: true } },
+            { new: true }
+        );
+        console.log("Task isViewed updated:", updatedTask);
+        return res.status(200).json({ message: "Task updated successfully", task: updatedTask });
+    } catch (error) {
+        console.log("Error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+
+});
+
 export default router;

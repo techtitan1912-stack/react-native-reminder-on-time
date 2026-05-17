@@ -22,7 +22,7 @@ agenda.define("task reminder", async (job) => {
     await sendFCMNotification(
       pushTokensArray,
       "Task Reminder",
-      `Reminder: ${title}`,
+      `${title}`,
       true, // ✅ alarm sound
       profileImage
     );

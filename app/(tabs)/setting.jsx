@@ -11,6 +11,7 @@ import { useAuthStore } from "../../store/authStore.js";
 
 export default function ProfileScreen() {
   const { user, profileImageUri, userNameAuth, dateOfBirthAuth, logout } = useAuthStore();
+  console.log("Profile image URI from store >> ", profileImageUri);
   const [logoutVisible, setLogoutVisible] = useState(false);
 
   const profileImage = user?.profileImage?.replace(".svg", ".png") || "https://via.placeholder.com/150"; // Fallback image
@@ -64,7 +65,7 @@ export default function ProfileScreen() {
           {/* Profile Image */}
           <View style={styles.profileWrapper}>
             <TouchableOpacity onPress={() => setImagePreviewVisible(true)}>
-              <Image source={{ uri: profileImageUri || "https://via.placeholder.com/150" }}
+              <Image source={{ uri: profileImage || "https://via.placeholder.com/150" }}
                 style={styles.profileImage}
               />
             </TouchableOpacity>

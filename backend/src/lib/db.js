@@ -13,6 +13,7 @@ const mongoOptions = {
   socketTimeoutMS: 45000,
   family: 4,
   maxPoolSize: 10,
+  dbName: "TaskOnTime_db",
 };
 
 
@@ -28,6 +29,8 @@ export const connectDB = async () => {
       process.env.MONGO_URI,
       mongoOptions
     );
+
+    console.log(`Connect with Database : ${mongoose.connection.name}`);
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 
