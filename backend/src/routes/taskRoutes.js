@@ -21,10 +21,9 @@ router.get("/getTasks", protectRoute, async (req, res) => {
         const tasks = await Task.find({
             $or: [
                 { user: req.user._id },
-                { mentionNumber: req.user.mobileNumber } // mobile number match
+                { mentionNumber: String(req.user.mobileNumber) }
             ]
-        })
-            .populate({
+        }).populate({
                 path: "user", // join with User table
                 select: "username email mobileNumber profileImage"
             })

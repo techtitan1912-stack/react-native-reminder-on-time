@@ -308,7 +308,7 @@ export default function Home() {
                 <View style={styles.taskCard}>
                     {/* 1️⃣ LEFT - Profile */}
                     <View style={styles.left}>
-                        <Image source={{ uri: item.profileImage ? item.profileImage : user?.profileImage || "https://via.placeholder.com/150" }} style={styles.taskProfileImage} />
+                        <Image source={{ uri: item.user?.profileImage ? item.user?.profileImage : user?.profileImage || "https://via.placeholder.com/150" }} style={styles.taskProfileImage} />
                     </View>
 
                     {/* 2️⃣ MIDDLE - Title + Date */}
