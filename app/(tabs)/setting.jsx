@@ -11,7 +11,7 @@ import { useAuthStore } from "../../store/authStore.js";
 
 export default function ProfileScreen() {
   const { user, profileImageUri, userNameAuth, dateOfBirthAuth, logout } = useAuthStore();
-  console.log("Profile image URI from store >> ", profileImageUri);
+  // console.log("Profile image URI from store >> ", profileImageUri);
   const [logoutVisible, setLogoutVisible] = useState(false);
 
   const profileImage = user?.profileImage?.replace(".svg", ".png") || "https://via.placeholder.com/150"; // Fallback image

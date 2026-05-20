@@ -105,10 +105,10 @@ export default function Home() {
                 }
             });
             const responseData = await response.json();
-            console.log("At get task list Response Data >> ", responseData); console.log(
-                "At get task list username >> ",
-                responseData.tasks[0]?.user
-            );
+            // console.log("At get task list Response Data >> ", responseData); console.log(
+            //     "At get task list username >> ",
+            //     responseData.tasks[0]?.user
+            // );
             if (!response.ok) throw new Error(responseData.message || "Something went wrong");
 
             const mergedTasks = refresh || pageNumber === 1

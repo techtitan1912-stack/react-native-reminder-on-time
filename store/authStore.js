@@ -225,7 +225,7 @@ export const useAuthStore = create((set) => ({
 
       const token = await AsyncStorage.getItem("token");
 
-      console.log("Updating profile with data >> ", { userName, dateOfBirth, profileImage });
+      console.log("Updating profile with data >> ", { userName, dateOfBirth, profileImage,token });
 
       const formData = new FormData();
 

@@ -115,7 +115,7 @@ const Profile = () => {
 
   }
   const toggleDatePicker = () => {
-    console.log("Toggling Date Picker");
+    // console.log("Toggling Date Picker");
     setShowDatePicker(!showDatePicker);
   }
 

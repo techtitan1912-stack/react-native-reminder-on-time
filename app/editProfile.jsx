@@ -27,7 +27,7 @@ export default function EditProfile({ navigation }) {
 
 
     const toggleDatePicker = () => {
-        console.log("Toggling Date Picker");
+        // console.log("Toggling Date Picker");
         setShowDatePicker(!showDatePicker);
     }
     const onDateChange = ({ type }, selectedDate) => {
@@ -188,6 +188,7 @@ export default function EditProfile({ navigation }) {
 
                 <TouchableOpacity style={[styles.button, styles.saveBtn]}
                     onPress={handleSaveProfile}>
+
                     <Text style={styles.saveText}>Save</Text>
                 </TouchableOpacity>
             </View>
@@ -200,7 +201,11 @@ export default function EditProfile({ navigation }) {
                     <Image source={{ uri: profileImage }} style={styles.fullImage} />
                 </TouchableOpacity>
             </Modal>
-            {isLoading && <ActivityIndicator color="#fff" />}
+            {isLoading && (
+                <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="large" color="#fff" />
+                </View>
+            )}
         </ScrollView>
     );
 }
@@ -306,5 +311,16 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.9)",
         justifyContent: "center",
         alignItems: "center",
+    },
+    loaderContainer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 999,
     },
 });

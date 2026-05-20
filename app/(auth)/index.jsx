@@ -129,6 +129,20 @@ export default function Index() {
             // if (!rootNavigationState?.key) return;
             router.replace('/(tabs)');
           } else {
+              console.log("Generating FCM token");            
+              const generatedPushToken = await registerPushToken();
+
+              console.log("Generated push notification token >> ", generatedPushToken);
+
+              if (!generatedPushToken) {
+                console.log("Push token not generated");
+                return;
+              }
+
+              await AsyncStorage.setItem("pushToken", generatedPushToken);
+              setPushToken(generatedPushToken);
+              console.log("Push token saved & set successfully >> ", generatedPushToken);
+
             console.log("Navigate to profile ");
             // ✅ Navigation
             router.replace('/profile');
