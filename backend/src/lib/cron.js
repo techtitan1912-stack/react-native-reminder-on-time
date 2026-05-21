@@ -1,7 +1,7 @@
 import cron from "cron";
 import https from "https";
 
-const targetUrl = process.env.API_URL || "http://localhost:3000";
+const targetUrl = "https://react-native-reminder-on-time.onrender.com/";
 
 const job = new cron.CronJob("*/14 * * * *", function () {
     console.log("Cron job pinging:", targetUrl);
